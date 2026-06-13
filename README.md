@@ -23,40 +23,44 @@
 - **Python 3.10+**
 - One of: Ollama running locally, an OpenAI API key, or an Anthropic API key
 
-## 🚀 Setup
+## 🚀 Installation
 
-### 1. Clone & install dependencies
-
-```bash
-cd EGOSHELL
-pip install -r requirements.txt
-```
-
-### 2. Run the setup wizard
+### ⚡ Quick Install (Recommended)
+Install EgoShell instantly using the automated setup script:
 
 ```bash
-python setup.py
+curl -fsSL https://raw.githubusercontent.com/prettymuchgavin/EGOSHELL/refs/heads/main/install_egoshell.sh | bash
 ```
 
-The interactive installer walks you through:
-- **Selecting your LLM provider** (Ollama / OpenAI / Anthropic)
-- **Entering API keys** (stored securely in `.env`, not committed to git)
-- **Choosing a model** (auto-detects locally pulled Ollama models)
-- **Tuning generation parameters** (temperature, max tokens)
-- **Setting the heartbeat interval** (how often the agent thinks autonomously)
-- **Naming your entity** and seeding its initial obsession & mood
-- **Testing the connection** to verify everything works
+### 🛠️ Manual Setup
+If you prefer to install manually:
 
-It creates `config.yaml`, `.env`, and `.gitignore` for you.
+1. **Clone & install dependencies**
+   ```bash
+   git clone https://github.com/prettymuchgavin/EGOSHELL.git
+   cd EGOSHELL
+   pip install -r requirements.txt
+   ```
 
-### 3. Launch EgoShell
+2. **Run the setup wizard**
+   ```bash
+   python setup.py
+   ```
+   The interactive installer walks you through:
+   - **Selecting your LLM provider** (Ollama / OpenAI / Anthropic)
+   - **Entering API keys** (stored securely in `.env`, not committed to git)
+   - **Choosing a model** (auto-detects locally pulled Ollama models)
+   - **Tuning generation parameters** (temperature, max tokens)
+   - **Setting the heartbeat interval** (how often the agent thinks autonomously)
+   - **Naming your entity** and seeding its initial obsession & mood
+   - **Testing the connection** to verify everything works
 
-```bash
-python main.py
-```
+3. **Launch EgoShell**
+   ```bash
+   python main.py
+   ```
 
 ### Manual configuration (alternative)
-
 If you prefer to skip the wizard, edit `config.yaml` directly:
 
 <details>
