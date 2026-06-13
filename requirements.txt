@@ -1,0 +1,8 @@
+rich>=13.0
+textual>=0.80
+pyyaml>=6.0
+python-dotenv>=1.0
+aiohttp>=3.9
+openai>=1.30
+anthropic>=0.30
+aiosqlite>=0.20

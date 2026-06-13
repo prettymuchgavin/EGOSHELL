@@ -1,0 +1,1 @@
+"""EgoShell UI subsystem."""
