@@ -138,6 +138,44 @@ class Installer:
         )
         self.initial_mood: str = "Curious"
 
+        # Try to load existing config.yaml if it exists
+        if CONFIG_PATH.is_file():
+            try:
+                import yaml
+                with open(CONFIG_PATH, "r", encoding="utf-8") as fh:
+                    config_data = yaml.safe_load(fh) or {}
+                
+                llm_data = config_data.get("llm", {})
+                heartbeat_data = config_data.get("heartbeat", {})
+                persona_data = config_data.get("persona", {})
+
+                if "provider" in llm_data:
+                    self.provider = llm_data["provider"]
+                if "model" in llm_data:
+                    self.model = llm_data["model"]
+                if "ollama_base_url" in llm_data:
+                    self.ollama_base_url = llm_data["ollama_base_url"]
+                if "openai_api_key" in llm_data:
+                    self.openai_api_key = llm_data["openai_api_key"]
+                if "anthropic_api_key" in llm_data:
+                    self.anthropic_api_key = llm_data["anthropic_api_key"]
+                if "temperature" in llm_data:
+                    self.temperature = float(llm_data["temperature"])
+                if "max_tokens" in llm_data:
+                    self.max_tokens = int(llm_data["max_tokens"])
+                
+                if "interval_minutes" in heartbeat_data:
+                    self.heartbeat_interval = int(heartbeat_data["interval_minutes"])
+                
+                if "name" in persona_data:
+                    self.persona_name = persona_data["name"]
+                if "initial_obsession" in persona_data:
+                    self.initial_obsession = persona_data["initial_obsession"]
+                if "initial_mood" in persona_data:
+                    self.initial_mood = persona_data["initial_mood"].capitalize()
+            except Exception:
+                pass
+
     # ── orchestrator ──────────────────────────────────────────────────
 
     def run(self) -> None:
@@ -547,8 +585,54 @@ class Installer:
                 self.con.print("  [dim]Keeping existing config.yaml.[/dim]")
             else:
                 self._write_file(CONFIG_PATH, yaml_content, "config.yaml")
+                self._update_existing_db()
         else:
             self._write_file(CONFIG_PATH, yaml_content, "config.yaml")
+            self._update_existing_db()
+
+    def _update_existing_db(self) -> None:
+        """Update soul.db with custom obsession/mood if they differ, so they take effect."""
+        db_path = Path.home() / ".egoshell" / "soul.db"
+        if db_path.exists():
+            try:
+                import sqlite3
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                
+                # Check if the active obsession is different
+                cursor.execute("SELECT text FROM obsessions WHERE active = 1 ORDER BY id DESC LIMIT 1")
+                row = cursor.fetchone()
+                current_db_obsession = row[0] if row else None
+                
+                if current_db_obsession != self.initial_obsession:
+                    cursor.execute("UPDATE obsessions SET active = 0 WHERE active = 1")
+                    import datetime
+                    now_utc = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+                    cursor.execute(
+                        "INSERT INTO obsessions (text, created_at, active) VALUES (?, ?, 1)",
+                        (self.initial_obsession.strip(), now_utc)
+                    )
+                    self.con.print("  [green]✓[/green] Updated obsession in existing [bold]soul.db[/bold]")
+                
+                # Check if the mood is different
+                cursor.execute("SELECT mood FROM mood_history ORDER BY id DESC LIMIT 1")
+                row_mood = cursor.fetchone()
+                current_db_mood = row_mood[0] if row_mood else None
+                
+                new_mood_cap = self.initial_mood.capitalize()
+                if current_db_mood != new_mood_cap:
+                    import datetime
+                    now_utc = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+                    cursor.execute(
+                        "INSERT INTO mood_history (mood, intensity, timestamp) VALUES (?, ?, ?)",
+                        (new_mood_cap, 0.6, now_utc)
+                    )
+                    self.con.print("  [green]✓[/green] Updated starting mood in existing [bold]soul.db[/bold]")
+                
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                self.con.print(f"  [yellow]⚠[/yellow] Could not update existing database: {e}")
 
         # ── .env (for API keys) ──
         if self.openai_api_key or self.anthropic_api_key:
