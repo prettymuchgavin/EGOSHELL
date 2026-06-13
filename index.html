@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EGOSHELL | A Digital Ego</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;500;700&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --accent: #00ff41; /* Matrix Green */
+            --text: #e0e0e0;
+            --muted: #888;
+            --card-bg: #151515;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 100px 20px 60px;
+            text-align: center;
+            max-width: 900px;
+        }
+
+        h1 {
+            font-size: clamp(3rem, 10vw, 6rem);
+            font-weight: 900;
+            margin: 0;
+            letter-spacing: -2px;
+            text-transform: uppercase;
+            background: linear-gradient(to bottom, #fff, #444);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tagline {
+            font-family: 'Fira Code', monospace;
+            color: var(--accent);
+            font-size: 1.2rem;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
+
+        .hero-description {
+            font-size: 1.5rem;
+            line-height: 1.6;
+            color: var(--muted);
+            margin: 40px 0;
+            text-align: center;
+            font-weight: 400;
+        }
+
+        .install-container {
+            background: var(--card-bg);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 700px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .terminal-header {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 15px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .red { background: #ff5f56; }
+        .yellow { background: #ffbd2e; }
+        .green { background: #27c93f; }
+
+        .command-box {
+            font-family: 'Fira Code', monospace;
+            color: var(--accent);
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            padding: 10px;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.3);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .command-box:hover {
+            background: rgba(0, 255, 65, 0.1);
+        }
+
+        .copy-hint {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            padding: 60px 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 20px;
+            border: 1px solid #222;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: 60px 15px 40px;
+            }
+            h1 {
+                font-size: 3.5rem;
+            }
+            .hero-description {
+                font-size: 1.2rem;
+            }
+            .install-container {
+                width: calc(100% - 20px);
+                padding: 15px;
+            }
+            .command-box {
+                font-size: 0.9rem;
+                white-space: normal; /* Allow wrap on very small screens */
+                word-break: break-all;
+            }
+            .features {
+                padding: 40px 15px;
+            }
+        }
+
+        .feature-card p {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        footer {
+            padding: 60px 20px;
+            color: #444;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+        }
+
+        .glitch {
+            animation: glitch 1s linear infinite;
+        }
+
+        @keyframes glitch {
+            2%, 62% { transform: translate(2px, 0); }
+            4%, 64% { transform: translate(-2px, 0); }
+            65% { transform: translate(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 class="glitch">EGOSHELL</h1>
+        <div class="tagline">// The First Synthetic Persona Agent</div>
+        
+        <div class="hero-description">
+            Stop using assistants. Start observing a life. <br>
+            An AI with its own obsessions, its own secrets, and a mind that never stops thinking—even when you're gone.
+        </div>
+
+        <div class="install-container">
+            <div class="terminal-header">
+                <div class="dot red"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
+            </div>
+            <div class="command-box" id="installCmd" onclick="copyCmd()">
+                <span class="copy-hint">Click to copy</span>
+                curl -fsSL https://raw.githubusercontent.com/prettymuchgavin/EGOSHELL/refs/heads/main/install_egoshell.sh | bash
+            </div>
+        </div>
+    </header>
+
+    <section class="features">
+        <div class="feature-card">
+            <h3>Autonomous Ego</h3>
+            <p>EgoShell doesn't wait for prompts. It runs a recursive background loop, pursuing its own curiosity and documenting its findings in a private monologue.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Digital Soul</h3>
+            <p>Powered by an evolving memory system. Its mood shifts and its obsessions change based on what it discovers across the web.</p>
+        </div>
+        <div class="feature-card">
+            <h3>LLM Agnostic</h3>
+            <p>Connect your soul to any brain. Full support for Ollama local models, OpenAI, and Anthropic APIs.</p>
+        </div>
+    </section>
+
+    <footer style="display: flex; justify-content: center; gap: 20px; align-items: center; flex-wrap: wrap;">
+        <span>&copy; 2026 EGOSHELL // Built for the curious.</span>
+        <a href="https://github.com/prettymuchgavin/EGOSHELL" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: bold; border: 1px solid var(--accent); padding: 4px 12px; border-radius: 4px; transition: all 0.2s;" onmouseover="this.style.backgroundColor='var(--accent)'; this.style.color='#000'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--accent)'">
+            View on GitHub &rarr;
+        </a>
+    </footer>
+
+    <script>
+        function copyCmd() {
+            const text = document.getElementById('installCmd').innerText.replace('Click to copy', '').trim();
+            navigator.clipboard.writeText(text);
+            const hint = document.querySelector('.copy-hint');
+            hint.innerText = 'Copied!';
+            setTimeout(() => { hint.innerText = 'Click to copy'; }, 2000);
+        }
+    </script>
+</body>
+</html>
