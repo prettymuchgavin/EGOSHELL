@@ -36,6 +36,46 @@ try:
     from rich import box
 
     HAS_RICH = True
+
+    # Patch Prompt, Confirm, and IntPrompt to handle non-interactive environments / EOFError gracefully
+    _non_interactive = False
+
+    def _patch_prompt(prompt_class):
+        original_ask = prompt_class.ask
+
+        @classmethod
+        def new_ask(cls, *args, **kwargs):
+            global _non_interactive
+            # Determine default value
+            default = kwargs.get("default", None)
+            if default is None:
+                if issubclass(cls, Confirm):
+                    default = True
+                elif issubclass(cls, IntPrompt):
+                    default = 0
+                else:
+                    default = ""
+
+            if _non_interactive:
+                return default
+
+            try:
+                return original_ask(*args, **kwargs)
+            except EOFError:
+                _non_interactive = True
+                console = kwargs.get("console") or Console()
+                console.print(
+                    "\n  [yellow]⚠[/yellow] Standard input EOF encountered. "
+                    "Switching to non-interactive mode and using default values."
+                )
+                return default
+
+        prompt_class.ask = new_ask
+
+    _patch_prompt(Prompt)
+    _patch_prompt(Confirm)
+    _patch_prompt(IntPrompt)
+
 except ImportError:
     HAS_RICH = False
 
