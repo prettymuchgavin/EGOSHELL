@@ -28,7 +28,7 @@
 ### 1. Clone & install dependencies
 
 ```bash
-cd gavinsAgent
+cd EGOSHELL
 pip install -r requirements.txt
 ```
 
