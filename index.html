@@ -201,7 +201,7 @@
             </div>
             <div class="command-box" id="installCmd" onclick="copyCmd()">
                 <span class="copy-hint">Click to copy</span>
-                curl -fsSL https://raw.githubusercontent.com/prettymuchgavin/EGOSHELL/refs/heads/main/install_egoshell.sh | bash
+                <span id="cmdText">curl -fsSL https://raw.githubusercontent.com/prettymuchgavin/EGOSHELL/refs/heads/main/install_egoshell.sh | bash</span>
             </div>
         </div>
     </header>
@@ -230,8 +230,9 @@
 
     <script>
         function copyCmd() {
-            const text = document.getElementById('installCmd').innerText.replace('Click to copy', '').trim();
-            navigator.clipboard.writeText(text);
+            const cmdText = document.getElementById('cmdText').innerText.trim();
+            navigator.clipboard.writeText(cmdText);
+            
             const hint = document.querySelector('.copy-hint');
             hint.innerText = 'Copied!';
             setTimeout(() => { hint.innerText = 'Click to copy'; }, 2000);
