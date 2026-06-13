@@ -72,7 +72,22 @@ def main() -> None:
         print("    python setup.py\n")
         sys.exit(1)
 
-    if args.headless:
+    # Detect if we should run in headless mode.
+    # The Textual UI cannot function without a TTY or if the process is running
+    # in the background (where trying to read stdin causes SIGTTIN suspension).
+    run_in_headless = args.headless
+    if not run_in_headless:
+        try:
+            import os
+            if not sys.stdin.isatty() or os.getpgrp() != os.tcgetpgrp(sys.stdin.fileno()):
+                run_in_headless = True
+        except Exception:
+            if not sys.stdin.isatty():
+                run_in_headless = True
+
+    if run_in_headless:
+        if not args.headless:
+            print("Background execution or non-TTY detected. Starting in headless mode...")
         try:
             asyncio.run(run_headless())
         except KeyboardInterrupt:
@@ -85,3 +100,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
