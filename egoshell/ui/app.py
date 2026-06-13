@@ -22,6 +22,7 @@ from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import (
+    Collapsible,
     Footer,
     Header,
     Input,
@@ -58,28 +59,114 @@ PHASE_COLORS: dict[str, str] = {
 # ═══════════════════════════════════════════════════════════════════════
 
 
-class ChatMessage(Static):
-    """A single chat bubble."""
+class ChatMessage(Vertical):
+    """A single chat bubble with support for collapsible thought processes."""
 
     DEFAULT_CSS = """
     ChatMessage {
         padding: 0 1;
         margin: 0 0 1 0;
+        layout: vertical;
+    }
+    .chat-header {
+        margin: 0;
+        padding: 0;
+    }
+    .chat-body {
+        margin: 0;
+        padding: 0;
+    }
+    Collapsible {
+        border: none;
+        margin: 0;
+        padding: 0;
+        background: transparent;
+    }
+    CollapsibleTitle {
+        background: transparent;
+        color: #7c4dff;
+        border: none;
+        height: 1;
+        min-height: 1;
+        padding: 0 1;
+    }
+    CollapsibleTitle:hover {
+        background: rgba(124, 77, 255, 0.1);
+        color: #9d7cff;
+    }
+    Contents {
+        border: none;
+        background: transparent;
+        padding: 0 0 0 2;
     }
     """
 
-    def __init__(self, role: str, content: str, **kw: Any) -> None:
+    def __init__(self, role: str, content: str = "", **kw: Any) -> None:
         super().__init__(**kw)
-        self._role = role
-        self._content = content
+        self.role = role
+        self._raw_content = content
 
     def compose(self) -> ComposeResult:
-        colour = USER_COLOR if self._role == "user" else AGENT_COLOR
-        label = "◈ you" if self._role == "user" else "◉ ego"
-        yield Static(
-            f"[bold {colour}]{label}[/]\n{escape(self._content)}",
-            classes="chat-bubble",
+        colour = USER_COLOR if self.role == "user" else AGENT_COLOR
+        label = "◈ you" if self.role == "user" else "◉ ego"
+        if self.role == "system":
+            colour = AMBER
+            label = "⚙ sys"
+
+        self.header_static = Static(f"[bold {colour}]{label}[/]", classes="chat-header")
+        yield self.header_static
+
+        self.collapsible = Collapsible(
+            Static("", id="thinking-content"),
+            title="Thought Process",
+            collapsed=True,
+            id="thinking-collapsible"
         )
+        self.collapsible.display = False
+        yield self.collapsible
+
+        self.body_static = Static("", classes="chat-body")
+        yield self.body_static
+
+    def on_mount(self) -> None:
+        self.update_content(self._raw_content)
+
+    def set_error(self) -> None:
+        self.header_static.update("[bold red]◉ ego[/]")
+
+    def update_content(self, content: str) -> None:
+        self._raw_content = content
+        
+        # Parse `<think>` and `</think>` tags
+        think_content = ""
+        response_content = content
+        
+        start_idx = content.find("<think>")
+        if start_idx != -1:
+            end_idx = content.find("</think>", start_idx)
+            if end_idx != -1:
+                think_content = content[start_idx + len("<think>"):end_idx].strip()
+                response_content = (content[:start_idx] + content[end_idx + len("</think>"):].strip())
+            else:
+                think_content = content[start_idx + len("<think>"):].strip()
+                response_content = content[:start_idx].strip()
+        else:
+            think_content = ""
+            response_content = content.strip()
+
+        # Update thinking process if present
+        if think_content:
+            try:
+                thinking_static = self.collapsible.query_one("#thinking-content", Static)
+                thinking_static.update(escape(think_content))
+            except Exception:
+                pass
+            self.collapsible.display = True
+        else:
+            self.collapsible.display = False
+
+        # Update response body
+        self.body_static.update(escape(response_content))
 
 
 class MonologueEntry(Static):
@@ -266,6 +353,7 @@ class EgoShellApp(App[None]):
     # ── lifecycle ────────────────────────────────────────────────────
 
     async def on_mount(self) -> None:
+        self.sub_title = f"Web Console: http://{self._agent.config.web.host}:{self._agent.config.web.port}"
         self._start_agent()
 
     @work(thread=False)
@@ -323,9 +411,7 @@ class EgoShellApp(App[None]):
             async for chunk in self._agent.chat(user_text):
                 chunks.append(chunk)
                 full = "".join(chunks)
-                widget.update(
-                    f"[bold {AGENT_COLOR}]◉ ego[/]\n{escape(full)}"
-                )
+                widget.update_content(full)
                 # Auto-scroll.
                 try:
                     scroll = self.query_one("#chat-scroll", VerticalScroll)
@@ -333,9 +419,8 @@ class EgoShellApp(App[None]):
                 except NoMatches:
                     pass
         except Exception as exc:
-            widget.update(
-                f"[bold red]◉ ego[/]\n⚠ Error: {escape(str(exc))}"
-            )
+            widget.set_error()
+            widget.update_content(f"⚠ Error: {exc}")
 
         self._streaming = False
         await self._sync_mood_bar()
@@ -379,18 +464,9 @@ class EgoShellApp(App[None]):
 
     # ── helpers ──────────────────────────────────────────────────────
 
-    def _append_chat(self, role: str, content: str) -> Static:
+    def _append_chat(self, role: str, content: str) -> ChatMessage:
         """Add a message widget to the chat scroll and return it."""
-        colour = USER_COLOR if role == "user" else AGENT_COLOR
-        label = "◈ you" if role == "user" else "◉ ego"
-        if role == "system":
-            colour = AMBER
-            label = "⚙ sys"
-
-        widget = Static(
-            f"[bold {colour}]{label}[/]\n{escape(content)}",
-            classes="chat-bubble",
-        )
+        widget = ChatMessage(role=role, content=content)
         try:
             scroll = self.query_one("#chat-scroll", VerticalScroll)
             scroll.mount(widget)

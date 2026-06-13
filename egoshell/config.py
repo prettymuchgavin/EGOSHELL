@@ -25,6 +25,7 @@ class LLMConfig:
     anthropic_api_key: str = ""
     temperature: float = 0.9
     max_tokens: int = 2048
+    think: bool = True
 
 
 @dataclass
@@ -42,11 +43,20 @@ class PersonaConfig:
 
 
 @dataclass
+class WebConfig:
+    """Web Console / UI configuration."""
+    enabled: bool = True
+    host: str = "127.0.0.1"
+    port: int = 5050
+
+
+@dataclass
 class Config:
     """Top-level application configuration."""
     llm: LLMConfig = field(default_factory=LLMConfig)
     heartbeat: HeartbeatConfig = field(default_factory=HeartbeatConfig)
     persona: PersonaConfig = field(default_factory=PersonaConfig)
+    web: WebConfig = field(default_factory=WebConfig)
 
     # Resolved data directory (default ~/.egoshell)
     data_dir: Path = field(default_factory=lambda: Path.home() / ".egoshell")
@@ -69,6 +79,7 @@ def _deep_merge(base: dict, override: dict) -> dict:
 def _apply_env_overrides(raw: dict[str, Any]) -> dict[str, Any]:
     """Override specific config values from environment variables."""
     llm = raw.setdefault("llm", {})
+    web_section = raw.setdefault("web", {})
 
     if key := os.getenv("OPENAI_API_KEY"):
         llm["openai_api_key"] = key
@@ -80,6 +91,15 @@ def _apply_env_overrides(raw: dict[str, Any]) -> dict[str, Any]:
         llm["provider"] = provider
     if model := os.getenv("EGOSHELL_MODEL"):
         llm["model"] = model
+    if think_env := os.getenv("EGOSHELL_THINK"):
+        llm["think"] = think_env.lower() in ("true", "1", "yes")
+
+    if web_enabled := os.getenv("EGOSHELL_WEB_ENABLED"):
+        web_section["enabled"] = web_enabled.lower() in ("true", "1", "yes")
+    if web_host := os.getenv("EGOSHELL_WEB_HOST"):
+        web_section["host"] = web_host
+    if web_port := os.getenv("EGOSHELL_WEB_PORT"):
+        web_section["port"] = int(web_port)
 
     return raw
 
@@ -123,6 +143,7 @@ def load_config(config_path: str | Path | None = None) -> Config:
     llm_raw = raw.get("llm", {})
     heartbeat_raw = raw.get("heartbeat", {})
     persona_raw = raw.get("persona", {})
+    web_raw = raw.get("web", {})
 
     config = Config(
         llm=LLMConfig(
@@ -133,6 +154,7 @@ def load_config(config_path: str | Path | None = None) -> Config:
             anthropic_api_key=llm_raw.get("anthropic_api_key", LLMConfig.anthropic_api_key),
             temperature=float(llm_raw.get("temperature", LLMConfig.temperature)),
             max_tokens=int(llm_raw.get("max_tokens", LLMConfig.max_tokens)),
+            think=llm_raw.get("think", LLMConfig.think),
         ),
         heartbeat=HeartbeatConfig(
             interval_minutes=int(heartbeat_raw.get("interval_minutes", HeartbeatConfig.interval_minutes)),
@@ -141,6 +163,11 @@ def load_config(config_path: str | Path | None = None) -> Config:
             name=persona_raw.get("name", PersonaConfig.name),
             initial_obsession=persona_raw.get("initial_obsession", PersonaConfig.initial_obsession),
             initial_mood=persona_raw.get("initial_mood", PersonaConfig.initial_mood),
+        ),
+        web=WebConfig(
+            enabled=web_raw.get("enabled", WebConfig.enabled) if isinstance(web_raw.get("enabled"), bool) else str(web_raw.get("enabled", WebConfig.enabled)).lower() in ("true", "1", "yes"),
+            host=web_raw.get("host", WebConfig.host),
+            port=int(web_raw.get("port", WebConfig.port)),
         ),
     )
 

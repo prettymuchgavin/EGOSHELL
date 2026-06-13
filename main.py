@@ -48,6 +48,12 @@ async def run_headless() -> None:
 
 
 def main() -> None:
+    # Handle the uninstall subcommand
+    if len(sys.argv) > 1 and sys.argv[1] == "uninstall":
+        from egoshell.uninstall import run_uninstall
+        run_uninstall()
+        return
+
     parser = argparse.ArgumentParser(description="EgoShell — launch the autonomous ego agent.")
     parser.add_argument(
         "--headless",

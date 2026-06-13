@@ -32,7 +32,7 @@ source .venv/bin/activate
 # Check if setup.py exists before running
 if [ -f "setup.py" ]; then
     echo "Running setup.py within venv..."
-    python3 setup.py
+    python3 setup.py < /dev/tty
 else
     echo "Error: setup.py not found in $HOME/$DIR_NAME"
     exit 1

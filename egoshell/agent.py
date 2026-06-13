@@ -29,6 +29,7 @@ class Agent:
         self._soul: Soul | None = None
         self._tools: ToolRegistry | None = None
         self._heartbeat: Heartbeat | None = None
+        self._web_server: Any = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -63,8 +64,19 @@ class Agent:
         )
         self._heartbeat.start()
 
+        if self.config.web.enabled:
+            from egoshell.web.server import WebServer
+            self._web_server = WebServer(
+                agent=self,
+                host=self.config.web.host,
+                port=self.config.web.port,
+            )
+            await self._web_server.start()
+
     async def stop(self) -> None:
         """Gracefully shut everything down."""
+        if self._web_server:
+            await self._web_server.stop()
         if self._heartbeat:
             await self._heartbeat.stop()
         if self._llm:

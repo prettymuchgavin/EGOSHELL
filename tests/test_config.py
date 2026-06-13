@@ -75,5 +75,66 @@ llm:
         self.assertEqual(config.llm.openai_api_key, "env-secret-key")
 
 
+    def test_think_defaults_and_yaml(self):
+        # Default behavior (think=True)
+        self.config_file.write("")
+        self.config_file.close()
+        config = load_config(self.config_path)
+        self.assertTrue(config.llm.think)
+
+        # YAML configuration override
+        self.setUp()  # Reset temp file
+        yaml_content = """
+llm:
+  think: false
+"""
+        self.config_file.write(yaml_content)
+        self.config_file.close()
+        config = load_config(self.config_path)
+        self.assertFalse(config.llm.think)
+
+    def test_web_config_defaults_and_yaml(self):
+        # Default behavior (web.enabled=True, host="127.0.0.1", port=5050)
+        self.config_file.write("")
+        self.config_file.close()
+        config = load_config(self.config_path)
+        self.assertTrue(config.web.enabled)
+        self.assertEqual(config.web.host, "127.0.0.1")
+        self.assertEqual(config.web.port, 5050)
+
+        # YAML configuration override
+        self.setUp()
+        yaml_content = """
+web:
+  enabled: false
+  host: 0.0.0.0
+  port: 8080
+"""
+        self.config_file.write(yaml_content)
+        self.config_file.close()
+        config = load_config(self.config_path)
+        self.assertFalse(config.web.enabled)
+        self.assertEqual(config.web.host, "0.0.0.0")
+        self.assertEqual(config.web.port, 8080)
+
+    def test_web_env_overrides(self):
+        self.config_file.write("")
+        self.config_file.close()
+
+        os.environ["EGOSHELL_WEB_ENABLED"] = "false"
+        os.environ["EGOSHELL_WEB_HOST"] = "1.2.3.4"
+        os.environ["EGOSHELL_WEB_PORT"] = "9999"
+
+        config = load_config(self.config_path)
+        self.assertFalse(config.web.enabled)
+        self.assertEqual(config.web.host, "1.2.3.4")
+        self.assertEqual(config.web.port, 9999)
+
+        # Clean up env
+        del os.environ["EGOSHELL_WEB_ENABLED"]
+        del os.environ["EGOSHELL_WEB_HOST"]
+        del os.environ["EGOSHELL_WEB_PORT"]
+
+
 if __name__ == "__main__":
     unittest.main()
