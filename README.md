@@ -26,10 +26,17 @@
 ## 🚀 Installation
 
 ### ⚡ Quick Install (Recommended)
-Install EgoShell instantly using the automated setup script:
+Install EgoShell instantly using the automated setup script for your platform:
 
+**macOS / Linux (Bash):**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/prettymuchgavin/EGOSHELL/refs/heads/main/install_egoshell.sh | bash
+```
+
+**Windows (PowerShell):**
+Open PowerShell and run:
+```powershell
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/prettymuchgavin/EGOSHELL/refs/heads/main/install_egoshell.ps1 | iex"
 ```
 
 ### 🛠️ Manual Setup
