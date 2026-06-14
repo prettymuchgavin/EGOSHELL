@@ -54,6 +54,12 @@ def main() -> None:
         run_uninstall()
         return
 
+    # Handle the desktop subcommand
+    if len(sys.argv) > 1 and sys.argv[1] == "desktop":
+        from egoshell.ui.desktop import run_desktop
+        run_desktop()
+        return
+
     parser = argparse.ArgumentParser(description="EgoShell — launch the autonomous ego agent.")
     parser.add_argument(
         "--headless",
@@ -79,7 +85,11 @@ def main() -> None:
     if not run_in_headless:
         try:
             import os
-            if not sys.stdin.isatty() or os.getpgrp() != os.tcgetpgrp(sys.stdin.fileno()):
+            if not sys.stdin.isatty() or (
+                hasattr(os, "getpgrp") 
+                and hasattr(os, "tcgetpgrp") 
+                and os.getpgrp() != os.tcgetpgrp(sys.stdin.fileno())
+            ):
                 run_in_headless = True
         except Exception:
             if not sys.stdin.isatty():

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 
 class Tool(ABC):
@@ -14,6 +15,11 @@ class Tool(ABC):
 
     name: str = "unnamed_tool"
     description: str = "No description."
+
+    @property
+    def parameter_schema(self) -> dict[str, Any]:
+        """Return a JSON Schema-like definition of parameters accepted by execute."""
+        return {}
 
     @abstractmethod
     async def execute(self, **kwargs: object) -> str:

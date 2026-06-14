@@ -22,6 +22,7 @@ class WebServer:
         self.runner: web.AppRunner | None = None
         self.site: web.TCPSite | None = None
         self.clients: Set[web.WebSocketResponse] = set()
+        self._tasks: Set[asyncio.Task] = set()
 
         # Route definitions
         self.app.router.add_get("/", self.handle_index)
@@ -40,7 +41,7 @@ class WebServer:
 
     async def handle_ws(self, request: web.Request) -> web.WebSocketResponse:
         """Handle real-time WebSocket connection to sync state and stream chat."""
-        ws = web.WebSocketResponse()
+        ws = web.WebSocketResponse(max_msg_size=1024*1024)
         await ws.prepare(request)
 
         self.clients.add(ws)
@@ -76,7 +77,9 @@ class WebServer:
                             text = data.get("text", "").strip()
                             if text:
                                 # Stream response in the background to avoid blocking socket read
-                                asyncio.create_task(self.stream_chat_response(ws, text))
+                                task = asyncio.create_task(self.stream_chat_response(ws, text))
+                                self._tasks.add(task)
+                                task.add_done_callback(self._tasks.discard)
                     except Exception as e:
                         logger.error(f"WebSocket parse error: {e}")
                 elif msg.type == web.WSMsgType.ERROR:
@@ -134,7 +137,9 @@ class WebServer:
         """Send a payload to all connected clients."""
         for ws in list(self.clients):
             if not ws.closed:
-                asyncio.create_task(ws.send_json(data))
+                task = asyncio.create_task(ws.send_json(data))
+                self._tasks.add(task)
+                task.add_done_callback(self._tasks.discard)
 
     def on_monologue_entry(self, entry: dict) -> None:
         """Callback to push background heartbeat thoughts to clients in real-time."""
@@ -159,10 +164,19 @@ class WebServer:
                 "The port might be occupied (likely another EgoShell instance is running)."
             )
             self.site = None
-            self.runner = None
+            if self.runner:
+                await self.runner.cleanup()
+                self.runner = None
 
     async def stop(self) -> None:
         """Shutdown TCP server and active client connections."""
+        # Cancel active background tasks
+        for task in list(self._tasks):
+            task.cancel()
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
+        self._tasks.clear()
+
         # Clean up registered observer callback
         try:
             self.agent.heartbeat.remove_observer(self.on_monologue_entry)

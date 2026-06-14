@@ -197,10 +197,14 @@ class MonologueEntry(Static):
         mood = e.get("emotional_state", "")
         mood_tag = f"  [{AMBER}]♫ {mood}[/]" if mood else ""
         content = e.get("content", "")
+        if len(content) > 400:
+            truncated = content[:400] + "... [truncated]"
+        else:
+            truncated = content
 
         yield Static(
             f"[{DIM}]{ts}[/]  [{colour} bold]{phase}[/]{mood_tag}\n"
-            f"[italic]{escape(content[:400])}[/]",
+            f"[italic]{escape(truncated)}[/]",
         )
 
 
@@ -450,6 +454,12 @@ class EgoShellApp(App[None]):
 
             await scroll.mount(MonologueEntry(entry))
             scroll.scroll_end(animate=False)
+
+            # Prune oldest monologue entries to prevent DOM bloat
+            if len(scroll.children) > 100:
+                oldest = list(scroll.children)[:len(scroll.children) - 100]
+                for child in oldest:
+                    child.remove()
         except NoMatches:
             pass
 
@@ -471,6 +481,12 @@ class EgoShellApp(App[None]):
             scroll = self.query_one("#chat-scroll", VerticalScroll)
             scroll.mount(widget)
             scroll.scroll_end(animate=False)
+
+            # Prune oldest chat messages to prevent DOM bloat
+            if len(scroll.children) > 100:
+                oldest = list(scroll.children)[:len(scroll.children) - 100]
+                for child in oldest:
+                    child.remove()
         except NoMatches:
             pass
         return widget
@@ -484,5 +500,12 @@ class EgoShellApp(App[None]):
             bar = self.query_one(MoodBar)
             bar.mood = mood
             bar.obsession = obsession
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.getLogger("egoshell.ui").exception("Failed to sync mood bar")
+            try:
+                bar = self.query_one(MoodBar)
+                bar.mood = "Error"
+                bar.obsession = f"Database sync failed: {e}"
+            except Exception:
+                pass

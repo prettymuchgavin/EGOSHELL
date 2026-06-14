@@ -98,9 +98,14 @@ def build_system_prompt(
         knowledge_block = "  (No discoveries yet — the world awaits.)"
 
     if tools:
-        tools_block = "\n".join(
-            f"  • {t['name']}: {t['description']}" for t in tools
-        )
+        import json
+        tools_lines = []
+        for t in tools:
+            desc = f"  • {t['name']}: {t['description']}"
+            if t.get("parameters"):
+                desc += f" (Parameters schema: {json.dumps(t['parameters'])})"
+            tools_lines.append(desc)
+        tools_block = "\n".join(tools_lines)
     else:
         tools_block = "  (No tools available.)"
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime as _dt
 from pathlib import Path
-from typing import Final
+from typing import Final, Any
 
 from egoshell.tools.base import Tool
 
@@ -16,6 +16,23 @@ class WriteDiaryTool(Tool):
 
     name = "write_diary"
     description = "Record a thought in the agent's diary with the current mood."
+
+    @property
+    def parameter_schema(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "description": "The text content of the diary entry."
+                },
+                "mood": {
+                    "type": "string",
+                    "description": "Optional mood label (e.g. Melancholy, Curious, Zen)."
+                }
+            },
+            "required": ["content"]
+        }
 
     def __init__(
         self,
@@ -56,9 +73,12 @@ class WriteDiaryTool(Tool):
         )
 
         try:
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-            with self._path.open("a", encoding="utf-8") as fh:
-                fh.write(entry)
+            def _write():
+                self._path.parent.mkdir(parents=True, exist_ok=True)
+                with self._path.open("a", encoding="utf-8") as fh:
+                    fh.write(entry)
+            import asyncio
+            await asyncio.to_thread(_write)
         except OSError as exc:
             return f"[write_diary] File error: {exc}"
 

@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator
 
 import aiohttp
 
-from egoshell.llm.base import LLMProvider
+from egoshell.llm.base import LLMProvider, LLMError
 
 
 class OllamaProvider(LLMProvider):
@@ -61,7 +61,7 @@ class OllamaProvider(LLMProvider):
                 data = await resp.json()
                 return data.get("message", {}).get("content", "")
         except aiohttp.ClientError as exc:
-            return f"[Ollama error: {exc}]"
+            raise LLMError(f"Ollama generation failed: {exc}") from exc
 
     async def stream(
         self,
@@ -93,7 +93,7 @@ class OllamaProvider(LLMProvider):
                     except json.JSONDecodeError:
                         continue
         except aiohttp.ClientError as exc:
-            yield f"[Ollama error: {exc}]"
+            raise LLMError(f"Ollama streaming failed: {exc}") from exc
 
     async def close(self) -> None:
         if self._session and not self._session.closed:

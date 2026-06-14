@@ -117,9 +117,9 @@ Switch to this tab to watch the agent's **internal monologue** as the heartbeat 
 
 | Key | Action |
 |---|---|
-| `Ctrl+T` | Switch between Chat and Observe modes |
-| `Ctrl+Q` | Quit EgoShell |
-| `Tab` | Navigate between tabs |
+| `Tab` | Switch between Chat and Observe modes |
+| `Ctrl+C` | Quit EgoShell |
+| `Ctrl+L` | Clear Chat |
 
 ## 🏗️ Architecture
 

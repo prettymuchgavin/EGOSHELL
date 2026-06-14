@@ -32,12 +32,23 @@ class TestTools(unittest.TestCase):
             </div>
         </div>
         """
-        results = WebSearchTool._parse_results(sample_html)
+        from egoshell.tools.web_search import DDGHTMLParser
+        parser = DDGHTMLParser()
+        parser.feed(sample_html)
+        results = parser.results
         self.assertEqual(len(results), 2)
         self.assertEqual(results[0]["title"], "First Result Title")
         self.assertEqual(results[0]["snippet"], "This is a snippet describing result one.")
+        self.assertEqual(results[0]["url"], "https://example.com/1")
         self.assertEqual(results[1]["title"], "Second Result Title")
         self.assertEqual(results[1]["snippet"], "This is another snippet for result two.")
+        self.assertEqual(results[1]["url"], "https://example.com/2")
+
+    def test_tool_schemas(self):
+        ws = WebSearchTool()
+        self.assertEqual(ws.parameter_schema["required"], ["query"])
+        diary = WriteDiaryTool()
+        self.assertEqual(diary.parameter_schema["required"], ["content"])
 
     def test_write_diary_explicit_mood(self):
         async def run():

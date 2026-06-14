@@ -6,7 +6,7 @@ from collections.abc import AsyncGenerator
 
 import anthropic
 
-from egoshell.llm.base import LLMProvider
+from egoshell.llm.base import LLMProvider, LLMError
 
 
 class AnthropicProvider(LLMProvider):
@@ -33,7 +33,7 @@ class AnthropicProvider(LLMProvider):
             )
             return response.content[0].text if response.content else ""
         except anthropic.APIError as exc:
-            return f"[Anthropic error: {exc}]"
+            raise LLMError(f"Anthropic generation failed: {exc}") from exc
 
     async def stream(
         self,
@@ -53,7 +53,7 @@ class AnthropicProvider(LLMProvider):
                 async for text in stream.text_stream:
                     yield text
         except anthropic.APIError as exc:
-            yield f"[Anthropic error: {exc}]"
+            raise LLMError(f"Anthropic streaming failed: {exc}") from exc
 
     async def close(self) -> None:
         await self._client.close()

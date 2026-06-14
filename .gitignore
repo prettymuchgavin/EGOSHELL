@@ -1,1 +1,10 @@
 egoshell_spec.md
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+soul.db
+diary.md
+monologue.log
+config.yaml

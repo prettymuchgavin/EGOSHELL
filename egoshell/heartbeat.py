@@ -22,6 +22,7 @@ from egoshell.llm.base import LLMProvider
 from egoshell.memory.soul import Soul
 from egoshell.persona import build_system_prompt
 from egoshell.tools.registry import ToolRegistry
+from egoshell.utils import extract_json
 
 logger = logging.getLogger(__name__)
 
@@ -100,16 +101,24 @@ class Heartbeat:
     async def _loop(self) -> None:
         # Run first cycle quickly (after 10s warm-up)
         await asyncio.sleep(10)
+        backoff = self._interval
         while self._running:
             try:
-                await self._cycle()
+                await asyncio.wait_for(self._cycle(), timeout=120.0)
+                backoff = self._interval
             except asyncio.CancelledError:
                 break
+            except asyncio.TimeoutError:
+                logger.error("Heartbeat cycle timed out after 120s")
+                entry = self._make_entry("error", "A cycle timed out. I'll try again later.", "Agitated")
+                self._emit(entry)
+                backoff = min(backoff * 2, 3600)
             except Exception:
                 logger.exception("Heartbeat cycle failed")
                 entry = self._make_entry("error", "A cycle failed. I'll try again later.", "Agitated")
                 self._emit(entry)
-            await asyncio.sleep(self._interval)
+                backoff = min(backoff * 2, 3600)
+            await asyncio.sleep(backoff)
 
     async def _cycle(self) -> None:
         """Execute one full Reflection → Curiosity → Action → Integration cycle."""
@@ -225,12 +234,10 @@ class Heartbeat:
     async def _execute_tool(self, action_response: str, mood: str) -> str:
         """Parse the LLM's JSON tool call and execute it."""
         try:
-            # Try to extract JSON from the response
-            json_match = re.search(r'\{.*\}', action_response, re.DOTALL)
-            if not json_match:
+            parsed = extract_json(action_response)
+            if not parsed:
                 return "Failed to parse tool call — no JSON found."
 
-            parsed = json.loads(json_match.group())
             tool_name = parsed.get("tool", "")
             args = parsed.get("args", {})
 
@@ -244,19 +251,17 @@ class Heartbeat:
 
             return await tool.execute(**args)
 
-        except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        except (KeyError, TypeError) as exc:
             return f"Tool call parse error: {exc}"
 
     async def _process_integration(self, raw: str, question: str) -> None:
         """Parse integration response and update Soul state."""
         try:
-            json_match = re.search(r'\{.*\}', raw, re.DOTALL)
-            if not json_match:
+            data = extract_json(raw)
+            if not data:
                 entry = self._make_entry("integration", raw, "Curious")
                 await self._persist(entry)
                 return
-
-            data = json.loads(json_match.group())
 
             thoughts = data.get("thoughts", raw)
             new_mood = data.get("new_mood", "Curious")
@@ -306,8 +311,10 @@ class Heartbeat:
 
         # JSON-lines file
         try:
-            with open(self._log_path, "a", encoding="utf-8") as fh:
-                fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            def _write():
+                with open(self._log_path, "a", encoding="utf-8") as fh:
+                    fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            await asyncio.to_thread(_write)
         except OSError:
             logger.exception("Failed to write monologue log")
 

@@ -68,6 +68,13 @@ CREATE TABLE IF NOT EXISTS monologue_entries (
     emotional_state TEXT NOT NULL DEFAULT 'neutral',
     timestamp       TEXT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_obsessions_id ON obsessions (id DESC);
+CREATE INDEX IF NOT EXISTS idx_mood_history_id ON mood_history (id DESC);
+CREATE INDEX IF NOT EXISTS idx_knowledge_id ON knowledge (id DESC);
+CREATE INDEX IF NOT EXISTS idx_conversations_id ON conversations (id DESC);
+CREATE INDEX IF NOT EXISTS idx_monologue_entries_id ON monologue_entries (id DESC);
+
 """
 
 
@@ -101,6 +108,7 @@ class Soul:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._db = await aiosqlite.connect(str(self._db_path))
         self._db.row_factory = aiosqlite.Row
+        await self._db.execute("PRAGMA journal_mode=WAL;")
         await self._db.executescript(_SCHEMA)
         await self._db.commit()
 
@@ -113,7 +121,8 @@ class Soul:
     @property
     def db(self) -> aiosqlite.Connection:
         """Guarded accessor — raises if ``open()`` wasn't called."""
-        assert self._db is not None, "Soul.open() must be called first"
+        if self._db is None:
+            raise RuntimeError("Soul.open() must be called first")
         return self._db
 
     # ── helpers ──────────────────────────────────────────────────────
@@ -208,6 +217,7 @@ class Soul:
             (role.strip(), content, _now()),
         )
         await self.db.commit()
+        await self.prune_database(max_conversations=200, prune_monologue=False)
 
     async def get_recent_conversations(
         self, limit: int = 20
@@ -234,6 +244,7 @@ class Soul:
             (phase.strip(), content, emotional_state.strip(), _now()),
         )
         await self.db.commit()
+        await self.prune_database(max_monologues=200, prune_conversations=False)
 
     async def get_recent_monologue(
         self, limit: int = 10
@@ -247,3 +258,27 @@ class Soul:
             rows = [dict(row) async for row in cur]
             rows.reverse()
             return rows
+
+    async def prune_database(
+        self, 
+        max_conversations: int = 200, 
+        max_monologues: int = 200,
+        prune_conversations: bool = True,
+        prune_monologue: bool = True
+    ) -> None:
+        """Deletes older entries beyond the specified limits to prevent database bloat."""
+        if prune_conversations:
+            await self.db.execute(
+                "DELETE FROM conversations WHERE id NOT IN ("
+                "SELECT id FROM conversations ORDER BY id DESC LIMIT ?"
+                ")",
+                (max_conversations,),
+            )
+        if prune_monologue:
+            await self.db.execute(
+                "DELETE FROM monologue_entries WHERE id NOT IN ("
+                "SELECT id FROM monologue_entries ORDER BY id DESC LIMIT ?"
+                ")",
+                (max_monologues,),
+            )
+        await self.db.commit()

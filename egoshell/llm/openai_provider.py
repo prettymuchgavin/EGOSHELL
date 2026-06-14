@@ -6,7 +6,7 @@ from collections.abc import AsyncGenerator
 
 from openai import AsyncOpenAI, OpenAIError
 
-from egoshell.llm.base import LLMProvider
+from egoshell.llm.base import LLMProvider, LLMError
 
 
 class OpenAIProvider(LLMProvider):
@@ -33,7 +33,7 @@ class OpenAIProvider(LLMProvider):
             )
             return response.choices[0].message.content or ""
         except OpenAIError as exc:
-            return f"[OpenAI error: {exc}]"
+            raise LLMError(f"OpenAI generation failed: {exc}") from exc
 
     async def stream(
         self,
@@ -56,7 +56,7 @@ class OpenAIProvider(LLMProvider):
                 if delta.content:
                     yield delta.content
         except OpenAIError as exc:
-            yield f"[OpenAI error: {exc}]"
+            raise LLMError(f"OpenAI streaming failed: {exc}") from exc
 
     async def close(self) -> None:
         await self._client.close()

@@ -99,7 +99,10 @@ def _apply_env_overrides(raw: dict[str, Any]) -> dict[str, Any]:
     if web_host := os.getenv("EGOSHELL_WEB_HOST"):
         web_section["host"] = web_host
     if web_port := os.getenv("EGOSHELL_WEB_PORT"):
-        web_section["port"] = int(web_port)
+        try:
+            web_section["port"] = int(web_port)
+        except ValueError:
+            pass
 
     return raw
 

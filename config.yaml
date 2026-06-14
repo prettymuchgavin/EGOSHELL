@@ -3,7 +3,7 @@
 
 llm:
   provider: ollama
-  model: gemma4:31b-cloud
+  model: gemma4:latest
   ollama_base_url: http://localhost:11434
   openai_api_key: ""
   anthropic_api_key: ""

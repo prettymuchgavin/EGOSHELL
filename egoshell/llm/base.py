@@ -5,6 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator
 
+class LLMError(Exception):
+    """Raised when an LLM provider encounters an error."""
 
 class LLMProvider(ABC):
     """Provider-agnostic interface for large language model backends."""

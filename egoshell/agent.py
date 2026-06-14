@@ -14,6 +14,8 @@ from egoshell.llm.factory import create_provider
 from egoshell.memory.soul import Soul
 from egoshell.persona import build_system_prompt
 from egoshell.tools.registry import ToolRegistry
+from egoshell.utils import extract_json
+
 
 
 class Agent:
@@ -81,6 +83,8 @@ class Agent:
             await self._heartbeat.stop()
         if self._llm:
             await self._llm.close()
+        if self._tools:
+            await self._tools.close()
         if self._soul:
             await self._soul.close()
 
@@ -90,22 +94,26 @@ class Agent:
 
     @property
     def soul(self) -> Soul:
-        assert self._soul is not None, "Agent.start() must be called first"
+        if self._soul is None:
+            raise RuntimeError("Agent.start() must be called first")
         return self._soul
 
     @property
     def heartbeat(self) -> Heartbeat:
-        assert self._heartbeat is not None, "Agent.start() must be called first"
+        if self._heartbeat is None:
+            raise RuntimeError("Agent.start() must be called first")
         return self._heartbeat
 
     @property
     def llm(self) -> LLMProvider:
-        assert self._llm is not None, "Agent.start() must be called first"
+        if self._llm is None:
+            raise RuntimeError("Agent.start() must be called first")
         return self._llm
 
     @property
     def tools(self) -> ToolRegistry:
-        assert self._tools is not None, "Agent.start() must be called first"
+        if self._tools is None:
+            raise RuntimeError("Agent.start() must be called first")
         return self._tools
 
     # ------------------------------------------------------------------
@@ -164,10 +172,9 @@ class Agent:
     async def _maybe_handle_tool(self, response: str) -> None:
         """If the response contains a tool call JSON, execute it."""
         try:
-            json_match = re.search(r'\{"tool":\s*".*?\}', response, re.DOTALL)
-            if not json_match:
+            data = extract_json(response)
+            if not data:
                 return
-            data = json.loads(json_match.group())
             tool_name = data.get("tool", "")
             args = data.get("args", {})
             tool = self.tools.get_tool(tool_name)
@@ -179,5 +186,5 @@ class Agent:
                 await self.soul.add_conversation(
                     "system", f"[Tool {tool_name} result]: {result}"
                 )
-        except (json.JSONDecodeError, KeyError, TypeError):
+        except (KeyError, TypeError):
             pass

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Iterator
+import asyncio
+from typing import Iterator, Any
 
 from egoshell.tools.base import Tool
 from egoshell.tools.web_search import WebSearchTool
@@ -69,12 +70,28 @@ class ToolRegistry:
     def __len__(self) -> int:
         return len(self._tools)
 
-    def list_tools(self) -> list[dict[str, str]]:
-        """Return a serialisable list of ``{"name": …, "description": …}``."""
+    def list_tools(self) -> list[dict[str, Any]]:
+        """Return a serialisable list of tool definitions including parameters."""
         return [
-            {"name": t.name, "description": t.description}
+            {
+                "name": t.name,
+                "description": t.description,
+                "parameters": t.parameter_schema
+            }
             for t in self._tools.values()
         ]
+
+    async def close(self) -> None:
+        """Close any tools that hold resources (like WebSearchTool's session)."""
+        for tool in self._tools.values():
+            if hasattr(tool, "close") and callable(tool.close):
+                try:
+                    if asyncio.iscoroutinefunction(tool.close):
+                        await tool.close()
+                    else:
+                        tool.close()
+                except Exception:
+                    pass
 
     def __repr__(self) -> str:
         names = ", ".join(self._tools)

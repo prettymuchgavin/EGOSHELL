@@ -6,3 +6,5 @@ aiohttp>=3.9
 openai>=1.30
 anthropic>=0.30
 aiosqlite>=0.20
+pywebview>=5.0
+
