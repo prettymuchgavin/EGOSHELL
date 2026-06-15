@@ -918,7 +918,12 @@ class Installer:
                             )
                             cmd = ["powershell", "-Command", ps_cmd]
                             subprocess.run(cmd, capture_output=True, check=True)
-                            self.con.print("  [green]✓[/green] Added to User PATH. Note: You may need to restart your terminal for changes to take effect.")
+                            self.con.print(
+                                "  [green]✓[/green] Added to User PATH.\n"
+                                "  [bold yellow]⚠ IMPORTANT:[/bold yellow] You must open a new terminal window for changes to take effect,\n"
+                                "  or run this command to refresh your current PowerShell session immediately:\n"
+                                "    [cyan]$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')[/cyan]"
+                            )
                         except Exception as e:
                             self.con.print(
                                 f"  [red]✗[/red] Failed to automatically add to PATH: {e}\n"

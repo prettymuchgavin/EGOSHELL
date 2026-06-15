@@ -6,6 +6,7 @@ import asyncio
 import logging
 import signal
 import sys
+import textwrap
 from pathlib import Path
 
 
@@ -60,7 +61,22 @@ def main() -> None:
         run_desktop()
         return
 
-    parser = argparse.ArgumentParser(description="EgoShell — launch the autonomous ego agent.")
+    # Handle the setup subcommand
+    if len(sys.argv) > 1 and sys.argv[1] == "setup":
+        import setup
+        setup.main()
+        return
+
+    parser = argparse.ArgumentParser(
+        description="EgoShell — launch the autonomous ego agent.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=textwrap.dedent("""\
+            subcommands:
+              setup       run the interactive setup wizard to configure the agent
+              uninstall   completely uninstall EgoShell (configs, databases, and launchers)
+              desktop     launch the desktop GUI application container
+            """)
+    )
     parser.add_argument(
         "--headless",
         action="store_true",

@@ -59,7 +59,14 @@ class OllamaProvider(LLMProvider):
             async with session.post(url, json=payload) as resp:
                 resp.raise_for_status()
                 data = await resp.json()
-                return data.get("message", {}).get("content", "")
+                message = data.get("message", {})
+                content = message.get("content", "")
+                
+                # Fallback for thinking models (e.g. gemma thinking models, deepseek-r1)
+                # if final content is empty but thinking is populated, return thinking formatted
+                if not content and message.get("thinking", ""):
+                    content = f"<think>\n{message.get('thinking', '')}\n</think>\n[Generation ended during thinking phase]"
+                return content
         except aiohttp.ClientError as exc:
             raise LLMError(f"Ollama generation failed: {exc}") from exc
 
@@ -76,6 +83,7 @@ class OllamaProvider(LLMProvider):
         )
         url = f"{self._base_url}/api/chat"
 
+        in_thinking = False
         try:
             async with session.post(url, json=payload) as resp:
                 resp.raise_for_status()
@@ -85,10 +93,26 @@ class OllamaProvider(LLMProvider):
                         continue
                     try:
                         chunk = json.loads(decoded)
-                        token = chunk.get("message", {}).get("content", "")
-                        if token:
-                            yield token
+                        message = chunk.get("message", {})
+                        
+                        thinking = message.get("thinking", "")
+                        content = message.get("content", "")
+                        
+                        if thinking:
+                            if not in_thinking:
+                                yield "<think>\n"
+                                in_thinking = True
+                            yield thinking
+                        
+                        if content:
+                            if in_thinking:
+                                yield "\n</think>\n"
+                                in_thinking = False
+                            yield content
+                            
                         if chunk.get("done"):
+                            if in_thinking:
+                                yield "\n</think>\n"
                             break
                     except json.JSONDecodeError:
                         continue
