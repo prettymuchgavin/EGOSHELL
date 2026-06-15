@@ -271,6 +271,37 @@ class Installer:
         os_display = "macOS" if os_sys == "Darwin" else os_sys
         self.con.print(f"  [cyan]System detected:[/cyan] [bold]{os_display}[/bold]\n")
 
+        # Check for administrative/root privileges
+        is_admin = False
+        if os_sys == "Windows":
+            import ctypes
+            try:
+                is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+            except Exception:
+                is_admin = False
+        else:
+            try:
+                is_admin = os.getuid() == 0
+            except AttributeError:
+                is_admin = False
+
+        if not is_admin:
+            self.con.print(
+                f"  [yellow]⚠ Note: This terminal is not running in elevated/Administrator mode.[/yellow]\n"
+                f"    For the best installation experience (including system background services),\n"
+                f"    please run this terminal in Administrator/Root mode.\n"
+            )
+            if os_sys == "Windows":
+                proceed = Confirm.ask(
+                    "  Do you want to proceed in non-admin mode (will use Startup folder fallback)?",
+                    default=True,
+                    console=self.con,
+                )
+                if not proceed:
+                    self.con.print("\n  [red]Aborting setup.[/red] Please open an elevated terminal and run setup again.\n")
+                    sys.exit(0)
+                self.con.print()
+
         self.con.print(
             "[dim]This wizard will walk you through configuring EgoShell.\n"
             "Press Ctrl+C at any time to abort without saving.[/dim]\n"
@@ -793,13 +824,13 @@ class Installer:
 
         test_script = textwrap.dedent(f"""\
             import asyncio, sys
-            sys.path.insert(0, "{PROJECT_DIR}")
+            sys.path.insert(0, "{PROJECT_DIR.as_posix()}")
 
             async def test():
                 from egoshell.config import load_config
                 from egoshell.llm.factory import create_provider
 
-                config = load_config("{CONFIG_PATH}")
+                config = load_config("{CONFIG_PATH.as_posix()}")
                 provider = create_provider(config)
 
                 try:
